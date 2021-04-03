@@ -1,0 +1,11 @@
+build/*
+!build/.gitkeep
+*.sh
+*.out
+*.cbp
+*.depend
+*.exe.stackdump
+*.layout
+bin/
+doc/
+obj/
