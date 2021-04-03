@@ -6,7 +6,7 @@
 
     $ cd build
     $ cmake ../src
-    $ cmake --build.
+    $ cmake --build .
 
 顺利的话，`build`目录里面会生成可执行程序`GEP.out`。如果采用其它的编译器或者编译套件，也可以简单地把`src`以及`src`下的子目录都设为搜索目录，然后执行编译即可。
 
