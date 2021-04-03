@@ -114,7 +114,7 @@ public:
         return opNumberMax;
     }
 
-    void print(GNode::Node<Op*>* node, bool needBrackets = false) {
+    void print(GNode::Node<Op*>* node) {
         using namespace std;
         using namespace GNode;
         if (OP_NUMBER == opType) {
@@ -145,24 +145,8 @@ public:
             cout << "?";
             return;
         }
-        bool needBracketsLeft = false;
-        bool needBracketsRight = false;
-        if (PRO == opTypeNumber || DES == opTypeNumber) {
-            if (OP_OPERATION == left->getOpType()) {
-                if (ADD == left->getTypeValue() || SUB == left->getTypeValue()) {
-                    needBracketsLeft = true;
-                }
-            }
-            if (OP_OPERATION == right->getOpType()) {
-                if (ADD == right->getTypeValue() || SUB == right->getTypeValue()) {
-                    needBracketsRight = true;
-                }
-            }
-        }
-        if (needBrackets) {
-            cout << "(";
-        }
-        left->print(nodeLeft, needBracketsLeft);
+        cout << "(";
+        left->print(nodeLeft);
         if (ADD == opTypeNumber) {
             cout << "+";
         }
@@ -175,10 +159,8 @@ public:
         if (DES == opTypeNumber) {
             cout << "/";
         }
-        right->print(nodeRight, needBracketsRight);
-        if (needBrackets) {
-            cout << ")";
-        }
+        right->print(nodeRight);
+        cout << ")";
     }
 
     long double calculate(GNode::Node<Op*>* node) {

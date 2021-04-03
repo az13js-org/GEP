@@ -17,13 +17,13 @@ int useMainProcess() {
         MainProcess mainProcess = MainProcess();
         mainProcess.setDebug(true);
         mainProcess.run(
-            300, // 种群大小
-            20, // 染色体长度
-            1.0L, // 初始范围
+            1000, // 种群大小
+            50, // 染色体长度
+            0.0L, // 初始范围
             4.0L, // 初始范围
-            100, // 最大迭代次数
+            1000, // 最大迭代次数
             0.99L, // 停止迭代适应度
-            150, // 每次迭代保留多少个上一代的高适应度个体
+            500, // 每次迭代保留多少个上一代的高适应度个体
             0.1L // 变异概率，随便变动范围系数
         );
     } catch (const char* message) {
