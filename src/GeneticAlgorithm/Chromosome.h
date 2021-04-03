@@ -169,17 +169,21 @@ namespace GeneticAlgorithm {
             if (r <= 0.0) {
                 return;
             }
+            Op* oldGene;
             std::uniform_real_distribution<long double> p(0.0, 1.0);
             for (unsigned long i = 0; i < this->lengthOfData; i++) {
                 if (p(GlobalCppRandomEngine::engine) <= r) {
                     this->isFitnessCached = false;
-                    if (nullptr != this->dataArray[i]) {
-                        delete this->dataArray[i];
-                    }
+                    oldGene = this->dataArray[i];
                     if (i < beginOfTail) {
                         this->dataArray[i] = Op::getRandomOptionOp();
+                    } else if (nullptr != oldGene) {
+                        this->dataArray[i] = Op::getRandomNumberOp(oldGene->getMin(), oldGene->getMax());
                     } else {
-                        this->dataArray[i] = Op::getRandomNumberOp(this->dataArray[i]->getMin(), this->dataArray[i]->getMax());
+                        this->dataArray[i] = Op::getRandomNumberOp();
+                    }
+                    if (nullptr != oldGene) {
+                        delete oldGene;
                     }
                 }
             }

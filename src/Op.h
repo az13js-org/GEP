@@ -38,7 +38,7 @@ private:
 
 public:
 
-    static Op* getRandomNumberOp(long double min, long double max) {
+    static Op* getRandomNumberOp(long double min = 0.0, long double max = 1.0) {
         using namespace std;
         using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
         uniform_real_distribution<long double> realDistribution(min, max);
@@ -52,7 +52,7 @@ public:
         return new Op(Op::OP_OPERATION, opTypeDistribution(GlobalCppRandomEngine::engine));
     }
 
-    static Op* getRandomOp(long double min, long double max) {
+    static Op* getRandomOp(long double min = 0.0, long double max = 1.0) {
         using namespace std;
         using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
         bernoulli_distribution boolDistribution(0.5);
