@@ -38,8 +38,8 @@ namespace GeneticAlgorithm {
          * @param unsigned long lengthOfChromosome
          */
         Chromosome(unsigned long lengthOfChromosome) {
-            if (lengthOfChromosome < 4) {
-                throw "Error, lengthOfChromosome must >= 4";
+            if (lengthOfChromosome < 8) {
+                throw "Error, lengthOfChromosome must >= 8";
             }
             this->dataArray = new Op*[lengthOfChromosome];
             for (unsigned long i = 0; i < lengthOfChromosome; i++) {
@@ -142,17 +142,25 @@ namespace GeneticAlgorithm {
          */
         Chromosome* crossover(Chromosome* another) {
             using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
+            unsigned long beginOfTail = this->lengthOfData / 2 - 1;
             if (another->getLength() != this->lengthOfData) {
                 throw "Length not equals!";
             }
-            std::uniform_int_distribution<unsigned long> crossoverSplitDistribution(1, this->lengthOfData - 1);
+            std::uniform_int_distribution<unsigned long> crossoverSplitDistribution(1, beginOfTail - 1);
             auto offset = crossoverSplitDistribution(GlobalCppRandomEngine::engine);
             auto newChromosome = new Chromosome(this->lengthOfData);
             for (unsigned long i = 0; i < offset; i++) {
                 newChromosome->setGene(i, Op::createLike(this->dataArray[i]));
             }
-            for (unsigned long i = offset; i < this->lengthOfData; i++) {
+            for (unsigned long i = offset; i < beginOfTail; i++) {
                 newChromosome->setGene(i, Op::createLike(another->getGene(i)));
+            }
+            long double mixValue = 0.0, min = 0.0, max = 0.0;
+            for (unsigned long i = beginOfTail; i < this->lengthOfData; i++) {
+                min = this->getGene(i)->getMin();
+                max = this->getGene(i)->getMax();
+                mixValue = (this->getGene(i)->getValue() + another->getGene(i)->getValue()) / 2.0;
+                newChromosome->setGene(i, new Op(Op::OP_NUMBER, mixValue, min, max));
             }
             return newChromosome;
         }

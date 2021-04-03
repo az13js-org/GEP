@@ -47,8 +47,8 @@ namespace GeneticAlgorithm {
          */
         Chromosome* buildRandomChromosome(unsigned long lengthOfData, long double numberOpMin, long double numberOpMax) {
             // 尾部的数字 OP 数量至少等于头部的操作 OP 的数量 + 2
-            if (lengthOfData < 4) {
-                throw "lengthOfData must >= 4";
+            if (lengthOfData < 8) {
+                throw "lengthOfData must >= 8";
             }
             unsigned long beginOfTail = lengthOfData / 2 - 1;
             auto buildChromosome = this->buildEmpty(lengthOfData);
