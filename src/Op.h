@@ -4,6 +4,7 @@
 #include "GNode/Node.h"
 #include "GeneticAlgorithm/Utils/GlobalCppRandomEngine.h"
 #include <random>
+#include <cmath>
 #include <iostream>
 
 class Op {
@@ -14,13 +15,15 @@ public:
     static const int SUB; // 减
     static const int PRO; // 乘
     static const int DES; // 除
+    static const int SIN; // 正弦运算
     static const int END; // 停止操作
 
     static const int OP_OPERATION; // 运算符
     static const int OP_NUMBER; // 数字
+    static const int OP_VARIABLE; // 自变量类型
 
-    static const int OP_ATTR_LEFT; // 是左侧的数字
-    static const int OP_ATTR_RIGHT; // 是右侧的数字
+    static const int OP_ATTR_LEFT; // 是左侧的数字或自变量
+    static const int OP_ATTR_RIGHT; // 是右侧的数字或自变量
 
 private:
 
@@ -55,11 +58,15 @@ public:
     static Op* getRandomOp(long double min = 0.0, long double max = 1.0) {
         using namespace std;
         using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
-        bernoulli_distribution boolDistribution(0.5);
-        if (boolDistribution(GlobalCppRandomEngine::engine)) { // is OP_NUMBER
+        uniform_int_distribution<int> selectOpDistribution(1, 3); // 3 种，数字，操作，变量
+        auto selectResult = selectOpDistribution(GlobalCppRandomEngine::engine);
+        if (1 == selectResult) {
             return getRandomNumberOp(min, max);
         }
-        return getRandomOptionOp();
+        if (2 == selectResult) {
+            return getRandomOptionOp();
+        }
+        return new Op(OP_VARIABLE, (min + max) / 2, min, max); // 变量Op和数字Op比较类似
     }
 
     static Op* createLike(Op* source) {
@@ -87,7 +94,7 @@ public:
     }
 
     int getOpType() {
-        return opType;
+        return opType; // OP_OPERATION, OP_VARIABLE, OP_NUMBER
     }
 
     long double getValue() {
@@ -95,7 +102,7 @@ public:
     }
 
     int getTypeValue() {
-        return opTypeNumber;
+        return opTypeNumber; // ADD, SUB, PRO, DES, SIN, END
     }
 
     void setOpAttribute(int opNumberAttribute) {
@@ -114,6 +121,24 @@ public:
         return opNumberMax;
     }
 
+    /**
+     * 返回当前的 Op 需要的子 Op 数目
+     *
+     * @return int
+     */
+    int getOperandTotal() {
+        if (OP_NUMBER == opType) {
+            return 0;
+        }
+        if (OP_VARIABLE == opType) {
+            return 0;
+        }
+        if (OP_OPERATION == opType && SIN == opTypeNumber) {
+            return 1;
+        }
+        return 2;
+    }
+
     void print(GNode::Node<Op*>* node) {
         using namespace std;
         using namespace GNode;
@@ -125,6 +150,10 @@ public:
             if (opNumber < 0) {
                 cout << ")";
             }
+            return;
+        }
+        if (OP_VARIABLE == opType) {
+            cout << "x";
             return;
         }
         Op* left = nullptr;
@@ -141,6 +170,17 @@ public:
                 nodeRight = e;
             }
         }
+        if (SIN == opTypeNumber) {
+            if (nullptr == left) {
+                cout << "?";
+                return;
+            }
+            cout << "sin(";
+            left->print(nodeLeft);
+            cout << ")";
+            return;
+        }
+
         if (nullptr == left || nullptr == right) {
             cout << "?";
             return;
@@ -163,19 +203,32 @@ public:
         cout << ")";
     }
 
-    long double calculate(GNode::Node<Op*>* node) {
+    /**
+     * 执行表达式计算
+     *
+     * @param Node<Op*>* node 节点
+     * @param long double variable 自变量，可选，默认是0
+     * @return long double
+     */
+    long double calculate(GNode::Node<Op*>* node, long double variable = 0.0) {
         using namespace std;
         if (OP_NUMBER == opType) {
             return opNumber;
+        }
+        if (OP_VARIABLE == opType) {
+            return variable;
         }
         long double left = 0;
         long double right = 0;
         for (auto e : node->getNodes()) {
             if (OP_ATTR_LEFT == e->getValue()->getOpAttribute()) {
-                left = e->getValue()->calculate(e);
+                left = e->getValue()->calculate(e, variable);
             } else {
-                right = e->getValue()->calculate(e);
+                right = e->getValue()->calculate(e, variable);
             }
+        }
+        if (SIN == opTypeNumber) {
+            return sin(left);
         }
         if (ADD == opTypeNumber) {
             return left + right;
@@ -198,12 +251,14 @@ const int Op::ADD = 1;
 const int Op::SUB = 2;
 const int Op::PRO = 3;
 const int Op::DES = 4;
-const int Op::END = 5;
+const int Op::SIN = 5;
+const int Op::END = 6;
 
 const int Op::OP_OPERATION = -1;
 const int Op::OP_NUMBER = -2;
+const int Op::OP_VARIABLE = -3;
 
-const int Op::OP_ATTR_LEFT = -3;
-const int Op::OP_ATTR_RIGHT = -4;
+const int Op::OP_ATTR_LEFT = -4;
+const int Op::OP_ATTR_RIGHT = -5;
 
 #endif

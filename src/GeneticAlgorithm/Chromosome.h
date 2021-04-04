@@ -2,10 +2,12 @@
 #define GENETICALGORITHM_CHROMOSOME_H
 
 #include "../Op.h"
+#include "../Dataset.h"
 #include "../GNode/Tree.h"
 #include "../GNode/Node.h"
 #include "Utils/GlobalCppRandomEngine.h"
 #include <iostream>
+#include <cmath>
 #include <queue>
 
 namespace GeneticAlgorithm {
@@ -102,7 +104,7 @@ namespace GeneticAlgorithm {
             auto root = tree->getRoot();
             auto rootOp = root->getValue();
             rootOp->print(root);
-            cout << "=" << rootOp->calculate(root) << endl;
+            cout << endl;
             delete tree;
         }
 
@@ -121,14 +123,21 @@ namespace GeneticAlgorithm {
          * @return long double
          */
         long double getFitness() {
+            using namespace std;
             if (this->isFitnessCached) {
                 return this->fitnessCached;
             }
             auto tree = this->buildTree();
             auto root = tree->getRoot();
             auto rootOp = root->getValue();
-            auto different = 100.0L - rootOp->calculate(root);
-            this->fitnessCached = 1.0L / (different * different + 1.0L);
+            long double different = 0.0;
+            long double sum = 0.0;
+            auto dataset = Dataset::getInstance();
+            for (unsigned long i = 0; i < dataset->getTotal(); i++) {
+                different = dataset->getOutput(i) - rootOp->calculate(root, dataset->getInput(i));
+                sum += abs(different);
+            }
+            this->fitnessCached = 1.0L / (sum / dataset->getTotal() + 0.1L);
             delete tree;
             this->isFitnessCached = true;
             return this->fitnessCached;
@@ -141,12 +150,14 @@ namespace GeneticAlgorithm {
          * @return Chromosome* 新的染色体对象，需要手动释放内存
          */
         Chromosome* crossover(Chromosome* another) {
-            using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
+            using Utils::GlobalCppRandomEngine;
+            using namespace std;
             unsigned long beginOfTail = this->lengthOfData / 2 - 1;
             if (another->getLength() != this->lengthOfData) {
                 throw "Length not equals!";
             }
-            std::uniform_int_distribution<unsigned long> crossoverSplitDistribution(1, beginOfTail - 1);
+            uniform_int_distribution<unsigned long> crossoverSplitDistribution(1, beginOfTail - 1);
+            bernoulli_distribution boolDistribution(0.5);
             auto offset = crossoverSplitDistribution(GlobalCppRandomEngine::engine);
             auto newChromosome = new Chromosome(this->lengthOfData);
             for (unsigned long i = 0; i < offset; i++) {
@@ -160,7 +171,15 @@ namespace GeneticAlgorithm {
                 min = this->getGene(i)->getMin();
                 max = this->getGene(i)->getMax();
                 mixValue = (this->getGene(i)->getValue() + another->getGene(i)->getValue()) / 2.0;
-                newChromosome->setGene(i, new Op(Op::OP_NUMBER, mixValue, min, max));
+                if (this->getGene(i)->getOpType() == another->getGene(i)->getOpType()) {
+                    newChromosome->setGene(i, new Op(this->getGene(i)->getOpType(), mixValue, min, max));
+                } else {
+                    if (boolDistribution(GlobalCppRandomEngine::engine)) {
+                        newChromosome->setGene(i, new Op(this->getGene(i)->getOpType(), mixValue, min, max));
+                    } else {
+                        newChromosome->setGene(i, new Op(another->getGene(i)->getOpType(), mixValue, min, max));
+                    }
+                }
             }
             return newChromosome;
         }
@@ -186,9 +205,9 @@ namespace GeneticAlgorithm {
                     if (i < beginOfTail) {
                         this->dataArray[i] = Op::getRandomOptionOp();
                     } else if (nullptr != oldGene) {
-                        this->dataArray[i] = Op::getRandomNumberOp(oldGene->getMin(), oldGene->getMax());
+                        this->dataArray[i] = this->mutationGetNumberOrVariableOp(oldGene->getMin(), oldGene->getMax());
                     } else {
-                        this->dataArray[i] = Op::getRandomNumberOp();
+                        this->dataArray[i] = this->mutationGetNumberOrVariableOp();
                     }
                     if (nullptr != oldGene) {
                         delete oldGene;
@@ -225,7 +244,7 @@ namespace GeneticAlgorithm {
             while (!hungryQueue.empty()) {
                 workingNode = hungryQueue.front();
                 hungryQueue.pop();
-                emptyChildNumber = Op::OP_OPERATION == workingNode->getValue()->getOpType() ? 2 : 0;
+                emptyChildNumber = workingNode->getValue()->getOperandTotal();
                 while (emptyChildNumber > 0) {
                     childNodeOp = this->dataArray[offset];
                     if (Op::OP_OPERATION == childNodeOp->getOpType()) {
@@ -240,7 +259,10 @@ namespace GeneticAlgorithm {
                     } else {
                         childNode = tree->create(childNodeOp);
                     }
-                    childNodeOp->setOpAttribute(2 == emptyChildNumber ? Op::OP_ATTR_LEFT : Op::OP_ATTR_RIGHT);
+                    childNodeOp->setOpAttribute(
+                        workingNode->getValue()->getOperandTotal() - emptyChildNumber == 0 ?
+                        Op::OP_ATTR_LEFT : Op::OP_ATTR_RIGHT
+                    );
                     workingNode->add(childNode);
                     offset++;
                     emptyChildNumber--;
@@ -250,6 +272,38 @@ namespace GeneticAlgorithm {
                 }
             }
             return tree;
+        }
+
+        /**
+         * 随机返回数值OP或者变量OP
+         *
+         * @param long double min
+         * @param long double max
+         * @return Op*
+         */
+        Op* mutationGetNumberOrVariableOp(long double min, long double max) {
+            using Utils::GlobalCppRandomEngine;
+            using namespace std;
+            bernoulli_distribution boolDistribution(0.5);
+            if (boolDistribution(GlobalCppRandomEngine::engine)) {
+                return Op::getRandomNumberOp(min, max);
+            }
+            return new Op(Op::OP_VARIABLE, (min + max) / 2, min, max);
+        }
+
+        /**
+         * 随机返回数值OP或者变量OP
+         *
+         * @return Op*
+         */
+        Op* mutationGetNumberOrVariableOp() {
+            using Utils::GlobalCppRandomEngine;
+            using namespace std;
+            bernoulli_distribution boolDistribution(0.5);
+            if (boolDistribution(GlobalCppRandomEngine::engine)) {
+                return Op::getRandomNumberOp();
+            }
+            return new Op(Op::OP_VARIABLE, 0.5, 0.0, 1.0);
         }
 
     };

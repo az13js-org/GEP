@@ -76,12 +76,7 @@ namespace GeneticAlgorithm {
             this->init();
             this->sort();
             this->maxFitness = this->population->getMaxFitnessChromosome()->getFitness();
-
-            if (this->debug) {
-                cout << "代数=0, 最大适应度=" << this->maxFitness << ", 个体信息：";
-                this->population->getMaxFitnessChromosome()->dump();
-            }
-
+            this->printInfo();
             while (this->loopNow < maxLoop && this->maxFitness < stopFitness) {
                 this->select();
                 this->crossover();
@@ -90,10 +85,7 @@ namespace GeneticAlgorithm {
                 this->sort();
                 this->maxFitness = this->population->getMaxFitnessChromosome()->getFitness();
                 this->loopNow++;
-                if (this->debug) {
-                    cout << "代数=" << this->loopNow << ", 最大适应度=" << this->maxFitness << ", 个体信息：";
-                    this->population->getMaxFitnessChromosome()->dump();
-                }
+                this->printInfo();
             }
             if (this->debug) {
                 cout << "结束。" << endl;
@@ -137,10 +129,7 @@ namespace GeneticAlgorithm {
                 this->sort();
                 this->maxFitness = this->population->getMaxFitnessChromosome()->getFitness();
                 this->loopNow++;
-                if (this->debug) {
-                    cout << "代数=" << this->loopNow << ", 最大适应度=" << this->maxFitness << ", 个体信息：";
-                    this->population->getMaxFitnessChromosome()->dump();
-                }
+                this->printInfo();
                 i++;
             }
             if (this->debug) {
@@ -268,6 +257,16 @@ namespace GeneticAlgorithm {
             if (nullptr != this->newChromosome) {
                 delete[] this->newChromosome;
                 this->newChromosome = nullptr;
+            }
+        }
+
+        // 迭代中用于打印调试数据
+        void printInfo() {
+            using namespace std;
+            if (this->debug) {
+                cout << "代数=" << this->loopNow << ", 最大适应度=" << this->maxFitness
+                    << ", 平均=" << this->population->getAvgFitness() << ", 个体信息：" << endl;
+                this->population->getMaxFitnessChromosome()->dump();
             }
         }
 

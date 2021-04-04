@@ -46,17 +46,24 @@ namespace GeneticAlgorithm {
          * @return Chromosome*
          */
         Chromosome* buildRandomChromosome(unsigned long lengthOfData, long double numberOpMin, long double numberOpMax) {
+            using Utils::GlobalCppRandomEngine;
+            using std::bernoulli_distribution;
             // 尾部的数字 OP 数量至少等于头部的操作 OP 的数量 + 2
             if (lengthOfData < 8) {
                 throw "lengthOfData must >= 8";
             }
+            bernoulli_distribution boolDistribution(0.5);
             unsigned long beginOfTail = lengthOfData / 2 - 1;
             auto buildChromosome = this->buildEmpty(lengthOfData);
             for (unsigned long i = 0; i < beginOfTail; i++) {
                 buildChromosome->setGene(i, Op::getRandomOptionOp());
             }
             for (unsigned long i = beginOfTail; i < lengthOfData; i++) {
-                buildChromosome->setGene(i, Op::getRandomNumberOp(numberOpMin, numberOpMax));
+                if (boolDistribution(GlobalCppRandomEngine::engine)) {
+                    buildChromosome->setGene(i, Op::getRandomNumberOp(numberOpMin, numberOpMax));
+                } else {
+                    buildChromosome->setGene(i, new Op(Op::OP_VARIABLE, (numberOpMin + numberOpMax) / 2, numberOpMin, numberOpMax));
+                }
             }
             return buildChromosome;
         }

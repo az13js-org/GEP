@@ -115,6 +115,19 @@ namespace GeneticAlgorithm {
             this->maxFitnessChromosomeOffset = 0;
         }
 
+        // 返回平均适应度
+        long double getAvgFitness() {
+            long double sum = 0.0;
+            unsigned long enableTotal = 0;
+            for (unsigned long i = 0; i < this->numberOfChromosome; i++) {
+                if (nullptr != this->chromosomeArray[i]) {
+                    sum += this->chromosomeArray[i]->getFitness();
+                    enableTotal++;
+                }
+            }
+            return sum / (long double)enableTotal;
+        }
+
     private:
         // 染色体数量
         unsigned long numberOfChromosome;
