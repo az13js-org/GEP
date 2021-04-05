@@ -267,6 +267,7 @@ namespace GeneticAlgorithm {
                 cout << "代数=" << this->loopNow << ", 最大适应度=" << this->maxFitness
                     << ", 平均=" << this->population->getAvgFitness() << ", 个体信息：" << endl;
                 this->population->getMaxFitnessChromosome()->dump();
+                cout << endl;
             }
         }
 

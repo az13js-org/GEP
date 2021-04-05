@@ -1,14 +1,10 @@
 #ifndef GENETICALGORITHM_CHROMOSOME_H
 #define GENETICALGORITHM_CHROMOSOME_H
 
-#include "../Op.h"
 #include "../Dataset.h"
-#include "../GNode/Tree.h"
-#include "../GNode/Node.h"
 #include "Utils/GlobalCppRandomEngine.h"
 #include <iostream>
 #include <cmath>
-#include <queue>
 
 namespace GeneticAlgorithm {
 
@@ -21,8 +17,8 @@ namespace GeneticAlgorithm {
         /** @var unsigned long 保存了此染色体的长度 */
         unsigned long lengthOfData;
 
-        /** @var Op** 保存了此染色体中基因的信息 */
-        Op** dataArray;
+        /** @var long double* 保存了此染色体中基因的信息 */
+        long double* dataArray;
 
         /** @var bool 为true时表示计算Fitness后缓存了计算结果，可以不用重复算 */
         bool isFitnessCached = false;
@@ -40,13 +36,10 @@ namespace GeneticAlgorithm {
          * @param unsigned long lengthOfChromosome
          */
         Chromosome(unsigned long lengthOfChromosome) {
-            if (lengthOfChromosome < 8) {
-                throw "Error, lengthOfChromosome must >= 8";
+            if (lengthOfChromosome < 3) {
+                throw "Error, lengthOfChromosome must >= 3";
             }
-            this->dataArray = new Op*[lengthOfChromosome];
-            for (unsigned long i = 0; i < lengthOfChromosome; i++) {
-                this->dataArray[i] = nullptr;
-            }
+            this->dataArray = new long double[lengthOfChromosome];
             this->lengthOfData = lengthOfChromosome;
         }
 
@@ -54,22 +47,17 @@ namespace GeneticAlgorithm {
          * 删除染色体，释放内存
          */
         ~Chromosome() {
-            for (unsigned long i = 0; i < this->lengthOfData; i++) {
-                if (nullptr != this->dataArray) {
-                    delete this->dataArray[i];
-                }
-            }
             delete[] this->dataArray;
         }
 
         /**
-         * 设置给定位置的 Op 对象指针
+         * 设置给定位置基因的值
          *
          * @param unsigned long offset 位置，大于等于0小于染色体的长度
-         * @param Op* value Op 对象的指针
+         * @param long double value 值
          * @return bool 成功返回 true
          */
-        bool setGene(unsigned long offset, Op* value) {
+        bool setGene(unsigned long offset, long double value) {
             if (offset > this->lengthOfData - 1) {
                 return false;
             }
@@ -81,12 +69,12 @@ namespace GeneticAlgorithm {
         }
 
         /**
-         * 获取给定位置的 Op 对象的指针
+         * 获取给定位置的值
          *
          * @param unsigned long offset 位置，大于等于0小于染色体的长度
-         * @return Op* Op对象指针
+         * @return long double
          */
-        Op* getGene(unsigned long offset) {
+        long double getGene(unsigned long offset) {
             if (offset > this->lengthOfData - 1) {
                 throw "Error, out of range.";
             }
@@ -100,12 +88,24 @@ namespace GeneticAlgorithm {
          */
         void dump() {
             using namespace std;
-            auto tree = this->buildTree();
-            auto root = tree->getRoot();
-            auto rootOp = root->getValue();
-            rootOp->print(root);
-            cout << endl;
-            delete tree;
+            unsigned long unitNumber = this->lengthOfData / 3;
+            unsigned long offsetBase = 0;
+            long double k, a, b;
+            for (unsigned long i = 0; i < unitNumber; i++) {
+                offsetBase = 3 * i;
+                k = this->dataArray[offsetBase];
+                a = this->dataArray[offsetBase + 1];
+                b = this->dataArray[offsetBase + 2];
+                if (k >= 0 && i > 0) {
+                    cout << "+";
+                }
+                cout << k << "*sin(";
+                cout << a << "*x";
+                if (b >= 0) {
+                    cout << "+";
+                }
+                cout << b << ")";
+            }
         }
 
         /**
@@ -127,18 +127,28 @@ namespace GeneticAlgorithm {
             if (this->isFitnessCached) {
                 return this->fitnessCached;
             }
-            auto tree = this->buildTree();
-            auto root = tree->getRoot();
-            auto rootOp = root->getValue();
-            long double different = 0.0;
-            long double sum = 0.0;
+            unsigned long unitNumber = this->lengthOfData / 3;
+            unsigned long offsetBase = 0;
+            long double k, a, b;
+            long double result;
+            long double datasetInput, datasetOutput, datasetSize;
+            long double errorSum = 0.0;
             auto dataset = Dataset::getInstance();
-            for (unsigned long i = 0; i < dataset->getTotal(); i++) {
-                different = dataset->getOutput(i) - rootOp->calculate(root, dataset->getInput(i));
-                sum += abs(different);
+            datasetSize = dataset->getTotal();
+            for (unsigned long j = 0; j < datasetSize; j++) {
+                datasetInput = dataset->getInput(j);
+                datasetOutput = dataset->getOutput(j);
+                result = 0;
+                for (unsigned long i = 0; i < unitNumber; i++) {
+                    offsetBase = 3 * i;
+                    k = this->dataArray[offsetBase];
+                    a = this->dataArray[offsetBase + 1];
+                    b = this->dataArray[offsetBase + 2];
+                    result += (k * sin(a * datasetInput + b));
+                }
+                errorSum += abs(result - datasetOutput);
             }
-            this->fitnessCached = 1.0L / (sum / dataset->getTotal() + 0.1L);
-            delete tree;
+            this->fitnessCached = 1.0L / (errorSum / (long double)datasetSize + 1.0L);
             this->isFitnessCached = true;
             return this->fitnessCached;
         }
@@ -150,36 +160,12 @@ namespace GeneticAlgorithm {
          * @return Chromosome* 新的染色体对象，需要手动释放内存
          */
         Chromosome* crossover(Chromosome* another) {
-            using Utils::GlobalCppRandomEngine;
-            using namespace std;
-            unsigned long beginOfTail = this->lengthOfData / 2 - 1;
             if (another->getLength() != this->lengthOfData) {
                 throw "Length not equals!";
             }
-            uniform_int_distribution<unsigned long> crossoverSplitDistribution(1, beginOfTail - 1);
-            bernoulli_distribution boolDistribution(0.5);
-            auto offset = crossoverSplitDistribution(GlobalCppRandomEngine::engine);
             auto newChromosome = new Chromosome(this->lengthOfData);
-            for (unsigned long i = 0; i < offset; i++) {
-                newChromosome->setGene(i, Op::createLike(this->dataArray[i]));
-            }
-            for (unsigned long i = offset; i < beginOfTail; i++) {
-                newChromosome->setGene(i, Op::createLike(another->getGene(i)));
-            }
-            long double mixValue = 0.0, min = 0.0, max = 0.0;
-            for (unsigned long i = beginOfTail; i < this->lengthOfData; i++) {
-                min = this->getGene(i)->getMin();
-                max = this->getGene(i)->getMax();
-                mixValue = (this->getGene(i)->getValue() + another->getGene(i)->getValue()) / 2.0;
-                if (this->getGene(i)->getOpType() == another->getGene(i)->getOpType()) {
-                    newChromosome->setGene(i, new Op(this->getGene(i)->getOpType(), mixValue, min, max));
-                } else {
-                    if (boolDistribution(GlobalCppRandomEngine::engine)) {
-                        newChromosome->setGene(i, new Op(this->getGene(i)->getOpType(), mixValue, min, max));
-                    } else {
-                        newChromosome->setGene(i, new Op(another->getGene(i)->getOpType(), mixValue, min, max));
-                    }
-                }
+            for (unsigned long i = 0; i < this->lengthOfData; i++) {
+                newChromosome->setGene(i, (this->dataArray[i] + another->getGene(i)) / 2.0);
             }
             return newChromosome;
         }
@@ -191,119 +177,14 @@ namespace GeneticAlgorithm {
          * @return void
          */
         void mutation(long double r) {
-            using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
-            unsigned long beginOfTail = this->lengthOfData / 2 - 1;
             if (r <= 0.0) {
                 return;
             }
-            Op* oldGene;
-            std::uniform_real_distribution<long double> p(0.0, 1.0);
+            using GeneticAlgorithm::Utils::GlobalCppRandomEngine;
+            std::normal_distribution<long double> distribution(0, r);
             for (unsigned long i = 0; i < this->lengthOfData; i++) {
-                if (p(GlobalCppRandomEngine::engine) <= r) {
-                    this->isFitnessCached = false;
-                    oldGene = this->dataArray[i];
-                    if (i < beginOfTail) {
-                        this->dataArray[i] = Op::getRandomOptionOp();
-                    } else if (nullptr != oldGene) {
-                        this->dataArray[i] = this->mutationGetNumberOrVariableOp(oldGene->getMin(), oldGene->getMax());
-                    } else {
-                        this->dataArray[i] = this->mutationGetNumberOrVariableOp();
-                    }
-                    if (nullptr != oldGene) {
-                        delete oldGene;
-                    }
-                }
+                this->dataArray[i] += distribution(GlobalCppRandomEngine::engine);
             }
-        }
-
-    private:
-
-        /**
-         * 根据染色体的信息，构造其对应的语法树
-         *
-         * @return Tree<Op*>*
-         */
-        GNode::Tree<Op*>* buildTree() {
-            using namespace GNode;
-            using namespace std;
-            if (nullptr == this->dataArray[0]) {
-                throw "Error, nullptr == this->dataArray[0], in Chromosome::buildTree().";
-            }
-            if (Op::END == this->dataArray[0]->getTypeValue()) {
-                return new Tree<Op*>(new Op(Op::OP_NUMBER, 0.0L), [](Op* o) {delete o;});
-            }
-            queue<Node<Op*>*> hungryQueue;
-            Node<Op*>* workingNode;
-            Node<Op*>* childNode;
-            Op* childNodeOp;
-            int emptyChildNumber = 0;
-            unsigned long offset = 1;
-            unsigned long beginOfTail = this->lengthOfData / 2 - 1;
-            auto tree = new Tree<Op*>(this->dataArray[0]);
-            hungryQueue.push(tree->getRoot());
-            while (!hungryQueue.empty()) {
-                workingNode = hungryQueue.front();
-                hungryQueue.pop();
-                emptyChildNumber = workingNode->getValue()->getOperandTotal();
-                while (emptyChildNumber > 0) {
-                    childNodeOp = this->dataArray[offset];
-                    if (Op::OP_OPERATION == childNodeOp->getOpType()) {
-                        if (Op::END != childNodeOp->getTypeValue()) {
-                            childNode = tree->create(childNodeOp);
-                            hungryQueue.push(childNode);
-                        } else {
-                            offset = beginOfTail;
-                            childNodeOp = this->dataArray[beginOfTail];
-                            childNode = tree->create(childNodeOp);
-                        }
-                    } else {
-                        childNode = tree->create(childNodeOp);
-                    }
-                    childNodeOp->setOpAttribute(
-                        workingNode->getValue()->getOperandTotal() - emptyChildNumber == 0 ?
-                        Op::OP_ATTR_LEFT : Op::OP_ATTR_RIGHT
-                    );
-                    workingNode->add(childNode);
-                    offset++;
-                    emptyChildNumber--;
-                    if (offset >= this->lengthOfData) {
-                        throw "Error, out of size, in Chromosome::buildTree().";
-                    }
-                }
-            }
-            return tree;
-        }
-
-        /**
-         * 随机返回数值OP或者变量OP
-         *
-         * @param long double min
-         * @param long double max
-         * @return Op*
-         */
-        Op* mutationGetNumberOrVariableOp(long double min, long double max) {
-            using Utils::GlobalCppRandomEngine;
-            using namespace std;
-            bernoulli_distribution boolDistribution(0.5);
-            if (boolDistribution(GlobalCppRandomEngine::engine)) {
-                return Op::getRandomNumberOp(min, max);
-            }
-            return new Op(Op::OP_VARIABLE, (min + max) / 2, min, max);
-        }
-
-        /**
-         * 随机返回数值OP或者变量OP
-         *
-         * @return Op*
-         */
-        Op* mutationGetNumberOrVariableOp() {
-            using Utils::GlobalCppRandomEngine;
-            using namespace std;
-            bernoulli_distribution boolDistribution(0.5);
-            if (boolDistribution(GlobalCppRandomEngine::engine)) {
-                return Op::getRandomNumberOp();
-            }
-            return new Op(Op::OP_VARIABLE, 0.5, 0.0, 1.0);
         }
 
     };

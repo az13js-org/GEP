@@ -1,11 +1,9 @@
 #ifndef GENETICALGORITHM_CHROMOSOMEFACTORY_H
 #define GENETICALGORITHM_CHROMOSOMEFACTORY_H
 
-#include "../Op.h"
 #include "Chromosome.h"
 #include "Utils/GlobalCppRandomEngine.h"
 #include <random>
-#include <iostream>
 
 namespace GeneticAlgorithm {
 
@@ -16,23 +14,16 @@ namespace GeneticAlgorithm {
     public:
 
         /**
-         * 从一个 Op对象指针的数组中创建染色体
-         *
-         * 会拷贝 Op 对象，而不是直接保留引用
-         *
-         * @param Op* data[] 数组
+         * 从一个数组中创建染色体
+         *         *
+         * @param long double data[] 数组
          * @param unsigned long lengthOfData 数组的长度
          * @return Chromosome*
          */
-        Chromosome* buildFromArray(Op* data[], unsigned long lengthOfData) {
-            Op* tmpOp;
-            Chromosome* buildChromosome = this->buildEmpty(lengthOfData);
+        Chromosome* buildFromArray(long double data[], unsigned long lengthOfData) {
+            auto buildChromosome = this->buildEmpty(lengthOfData);
             for (unsigned long i = 0; i < lengthOfData; i++) {
-                tmpOp = Op::createLike(data[i]);
-                if (!buildChromosome->setGene(i, tmpOp)) {
-                    delete tmpOp;
-                    throw "Error, \"Chromosome::setGene\" return false. Exception throw in method \"ChromosomeFactory::buildFromArray\".";
-                }
+                buildChromosome->setGene(i, data[i]);
             }
             return buildChromosome;
         }
@@ -41,29 +32,16 @@ namespace GeneticAlgorithm {
          * 随机地创建染色体
          *
          * @param unsigned long lengthOfData 染色体长度
-         * @param long double numberOpMin 数字 Op 的最小值
-         * @param long double numberOpMax 数字 Op 的最大值
+         * @param long double numberOpMin 最小值
+         * @param long double numberOpMax 最大值
          * @return Chromosome*
          */
         Chromosome* buildRandomChromosome(unsigned long lengthOfData, long double numberOpMin, long double numberOpMax) {
             using Utils::GlobalCppRandomEngine;
-            using std::bernoulli_distribution;
-            // 尾部的数字 OP 数量至少等于头部的操作 OP 的数量 + 2
-            if (lengthOfData < 8) {
-                throw "lengthOfData must >= 8";
-            }
-            bernoulli_distribution boolDistribution(0.5);
-            unsigned long beginOfTail = lengthOfData / 2 - 1;
+            std::uniform_real_distribution<long double> formateRandomNumberRange(numberOpMin, numberOpMax);
             auto buildChromosome = this->buildEmpty(lengthOfData);
-            for (unsigned long i = 0; i < beginOfTail; i++) {
-                buildChromosome->setGene(i, Op::getRandomOptionOp());
-            }
-            for (unsigned long i = beginOfTail; i < lengthOfData; i++) {
-                if (boolDistribution(GlobalCppRandomEngine::engine)) {
-                    buildChromosome->setGene(i, Op::getRandomNumberOp(numberOpMin, numberOpMax));
-                } else {
-                    buildChromosome->setGene(i, new Op(Op::OP_VARIABLE, (numberOpMin + numberOpMax) / 2, numberOpMin, numberOpMax));
-                }
+            for (unsigned long i = 0; i < lengthOfData; i++) {
+                buildChromosome->setGene(i, formateRandomNumberRange(GlobalCppRandomEngine::engine));
             }
             return buildChromosome;
         }
@@ -85,9 +63,9 @@ namespace GeneticAlgorithm {
          * @return Chromosome*
          */
         Chromosome* buildFromChromosome(Chromosome* existsChromosome) {
-            Chromosome* result = this->buildEmpty(existsChromosome->getLength());
+            auto result = this->buildEmpty(existsChromosome->getLength());
             for (unsigned long i = 0; i < result->getLength(); i++) {
-                result->setGene(i, Op::createLike(existsChromosome->getGene(i)));
+                result->setGene(i, existsChromosome->getGene(i));
             }
             return result;
         }
