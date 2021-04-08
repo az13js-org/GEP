@@ -45,6 +45,8 @@ namespace Experiment {
          * @param long double maxv 训练参数随机化的最大值
          */
         SineCells(unsigned long total, long double minv = -1.0L, long double maxv = 1.0L) {
+            std::random_device randomSeed;
+            engine.seed(randomSeed());
             std::uniform_real_distribution<long double> range(minv, maxv);
             this->total = total;
             k = new long double[total];
@@ -94,6 +96,8 @@ namespace Experiment {
             using std::sin;
             using std::cos;
             using std::sqrt;
+            using std::cout;
+            using std::endl;
             long double* mk = new long double[total];
             long double* ma = new long double[total];
             long double* mb = new long double[total];
@@ -162,6 +166,17 @@ namespace Experiment {
                 if (nullptr != callback) {
                     callback(epoch + 1, errors / sizeOfDataset);
                 }
+                continue;
+                if (epochs - epoch > 1000.00) {
+                    continue;
+                }
+                cout << epoch;
+                for (unsigned long i = 0; i < total; i++) {
+                    cout << "," << gk[i];
+                    cout << "," << ga[i];
+                    cout << "," << gb[i];
+                }
+                cout << endl;
             }
             delete[] mk;
             delete[] ma;

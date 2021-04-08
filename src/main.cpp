@@ -7,8 +7,8 @@ using namespace std;
 
 int main()
 {
-    auto s = SineCells(3, -1.0L, 1.0L);
-    unsigned long epochs = 1000;
+    auto s = SineCells(30, -1.0L, 1.0L);
+    unsigned long epochs = 10000000;
     s.fit(
         [](unsigned long i) {
             return Dataset::getInstance()->getInput(i);
@@ -19,19 +19,23 @@ int main()
         Dataset::getInstance()->getTotal(),
         epochs,
         [&s, epochs](unsigned long epoch, long double mse) {
+            //return;
             if (1 == epoch) {
                 cout << "EPOCH,MSE" << endl;
             }
-            if (epoch % 10 != 0 && epoch < epochs) {
+            if (epoch % 500 != 0 && epoch < epochs) {
                 return;
             }
             cout << epoch << "," << mse << endl;
-            if (epoch == epochs) {
+            //if (epoch == epochs) {
                 cout << "\"";
                 s.dump();
                 cout << "\"" << endl;
-            }
-        }
+            //}
+        },
+        0.001,
+        0.9,
+        0.999
     );
     return 0;
 }
